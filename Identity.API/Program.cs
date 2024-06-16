@@ -6,13 +6,25 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey
+    });
+
+    options.OperationFilter<SecurityRequirementsOperationFilter>();
+});
 
 string? databaseConnection = builder.Configuration.GetConnectionString("Database") 
     ?? throw new InvalidOperationException("No db connection string provided");
@@ -26,20 +38,24 @@ builder.Services.AddIdentity<Client, IdentityRole<Guid>>()
     .AddRoles<IdentityRole<Guid>>();
 
 // Add JWT
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new()
     {
-        options.TokenValidationParameters = new()
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidateLifetime = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secretkey"]!))
-        };
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+});
 
 builder.Services.AddAuthorization();
 
@@ -57,17 +73,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/users/me", (ClaimsPrincipal user) =>
-{
-    if (user.Identity?.IsAuthenticated != true)
+app.MapGet("users/me", (ClaimsPrincipal claims) => 
+    Results.Ok(new
     {
-        return Results.Unauthorized();
-    }
+        Id = $"User Id = {claims.FindFirst(ClaimTypes.NameIdentifier)?.Value}",
+        Name = $"User Name = {claims.FindFirst(ClaimTypes.Name)?.Value}",
+        Email = $"User Email = {claims.FindFirst(ClaimTypes.Email)?.Value}",
+    }))
+    .RequireAuthorization();
 
-    return Results.Ok(new { Message = "Yooo", User = user.Identity?.Name });
-}).RequireAuthorization();
-
-app.MapPost("/users/register", async (
+app.MapPost("users/register", async (
     RegisterRequest request, 
     IJwtService jwtService,
     UserManager<Client> client,
