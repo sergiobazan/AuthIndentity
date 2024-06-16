@@ -4,5 +4,5 @@ namespace Identity.API.Services;
 
 public interface IJwtService
 {
-    string GenerateToken(Client client);
+    string GenerateToken(Client client, string role);
 }

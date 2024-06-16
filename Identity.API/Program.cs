@@ -3,6 +3,7 @@ using Identity.API.Database;
 using Identity.API.Entities;
 using Identity.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -73,14 +74,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("users/me", (ClaimsPrincipal claims) => 
-    Results.Ok(new
+app.MapGet("users/me", 
+    [Authorize(Roles = "Client")]
+    (ClaimsPrincipal claims) =>
     {
-        Id = $"User Id = {claims.FindFirst(ClaimTypes.NameIdentifier)?.Value}",
-        Name = $"User Name = {claims.FindFirst(ClaimTypes.Name)?.Value}",
-        Email = $"User Email = {claims.FindFirst(ClaimTypes.Email)?.Value}",
-    }))
-    .RequireAuthorization();
+        return Results.Ok(new
+        {
+            Id = $"User Id = {claims.FindFirst(ClaimTypes.NameIdentifier)?.Value}",
+            Name = $"User Name = {claims.FindFirst(ClaimTypes.Name)?.Value}",
+            Email = $"User Email = {claims.FindFirst(ClaimTypes.Email)?.Value}",
+        });
+    }
+   ).RequireAuthorization();
 
 app.MapPost("users/register", async (
     RegisterRequest request, 
@@ -108,7 +113,9 @@ app.MapPost("users/register", async (
 
     await client.AddToRoleAsync(newClient, "Client");
 
-    var token = jwtService.GenerateToken(newClient);
+    var userRole = await client.GetRolesAsync(newClient);
+
+    var token = jwtService.GenerateToken(newClient, userRole.FirstOrDefault());
 
     return Results.Ok(new AuthenticationResponse(
         newClient.Id,

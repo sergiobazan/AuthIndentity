@@ -15,9 +15,9 @@ public class JwtService : IJwtService
         _configuration = configuration;
     }
 
-    public string GenerateToken(Client client)
+    public string GenerateToken(Client client, string role)
     {
-        var claims = GetClaims(client);
+        var claims = GetClaims(client, role);
         var securityKey = GetSecurityKey();
 
         var securityToken = new JwtSecurityToken(
@@ -40,13 +40,14 @@ public class JwtService : IJwtService
             SecurityAlgorithms.HmacSha256);
     }
 
-    public Claim[] GetClaims(Client client)
+    public Claim[] GetClaims(Client client, string role)
     {
         return
         [
             new(JwtRegisteredClaimNames.Sub, client.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, client.Email!),
             new(ClaimTypes.Name, client.UserName!),
+            new(ClaimTypes.Role, role)
         ];
     }
 }
