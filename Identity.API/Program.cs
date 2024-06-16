@@ -1,29 +1,16 @@
 using Identity.API.Database;
 using Identity.API.Endpoints;
 using Identity.API.Entities;
+using Identity.API.Options;
 using Identity.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Filters;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-    {
-        In = ParameterLocation.Header,
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey
-    });
-
-    options.OperationFilter<SecurityRequirementsOperationFilter>();
-});
+builder.Services.AddSwaggerGen();
 
 string? databaseConnection = builder.Configuration.GetConnectionString("Database") 
     ?? throw new InvalidOperationException("No db connection string provided");
@@ -42,19 +29,11 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new()
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateIssuerSigningKey = true,
-        ValidateLifetime = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
-    };
-});
+.AddJwtBearer();
+
+builder.Services.ConfigureOptions<JwtOptionsConfiguration>();
+builder.Services.ConfigureOptions<JwtBearerConfiguration>();
+builder.Services.ConfigureOptions<SwaggerGenOptionsConfiguration>();
 
 builder.Services.AddAuthorization();
 

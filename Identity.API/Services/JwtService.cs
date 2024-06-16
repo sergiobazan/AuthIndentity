@@ -1,4 +1,6 @@
 ﻿using Identity.API.Entities;
+using Identity.API.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -8,11 +10,11 @@ namespace Identity.API.Services;
 
 public class JwtService : IJwtService
 {
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions _jwtOptions;
 
-    public JwtService(IConfiguration configuration)
+    public JwtService(IOptions<JwtOptions> jwtOptions)
     {
-        _configuration = configuration;
+        _jwtOptions = jwtOptions.Value;
     }
 
     public string GenerateToken(Client client, string role)
@@ -21,8 +23,8 @@ public class JwtService : IJwtService
         var securityKey = GetSecurityKey();
 
         var securityToken = new JwtSecurityToken(
-            _configuration["Jwt:Issuer"],
-            _configuration["Jwt:Audience"],
+            _jwtOptions.Issuer,
+            _jwtOptions.Audience,
             claims,
             null,
             DateTime.UtcNow.AddMinutes(5),
@@ -36,7 +38,7 @@ public class JwtService : IJwtService
     private SigningCredentials GetSecurityKey()
     {
         return new(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key)),
             SecurityAlgorithms.HmacSha256);
     }
 
