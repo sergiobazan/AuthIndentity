@@ -12,7 +12,7 @@ public static class AuthRoutes
     public static void AddAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("users/me",
-            [HasPermission(Permission.Admin)]
+            [HasPermission(Permission.Client)]
             (ClaimsPrincipal claims) =>
         {
             return Results.Ok(new
