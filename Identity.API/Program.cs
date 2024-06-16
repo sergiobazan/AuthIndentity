@@ -122,4 +122,25 @@ app.MapPost("users/register", async (
         token));    
 });
 
+app.MapPost("users/login",
+    async (
+        LoginRequest request,
+        IJwtService jwtService,
+        UserManager<Client> clientManager) =>
+{
+    var client = await clientManager.FindByEmailAsync(request.Email);
+
+    if (client is null) return Results.BadRequest("Invalid credentials");
+
+    bool checkUserPassword = await clientManager.CheckPasswordAsync(client, request.Password);
+
+    if (!checkUserPassword) return Results.BadRequest("Invalid credentials");
+
+    var clientRoles = await clientManager.GetRolesAsync(client);
+
+    var token = jwtService.GenerateToken(client, clientRoles.FirstOrDefault());
+
+    return Results.Ok(new AuthenticationResponse(client.Id, token));
+});
+
 app.Run();
