@@ -2,8 +2,10 @@ using Identity.API.Database;
 using Identity.API.Endpoints;
 using Identity.API.Entities;
 using Identity.API.Options;
+using Identity.API.Permissions;
 using Identity.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,11 +33,13 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer();
 
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizaitonPolicyProvider>();
+
 builder.Services.ConfigureOptions<JwtOptionsConfiguration>();
 builder.Services.ConfigureOptions<JwtBearerConfiguration>();
 builder.Services.ConfigureOptions<SwaggerGenOptionsConfiguration>();
-
-builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 

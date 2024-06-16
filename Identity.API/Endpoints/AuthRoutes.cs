@@ -1,7 +1,7 @@
 ﻿using Contracts;
 using Identity.API.Entities;
+using Identity.API.Permissions;
 using Identity.API.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 
@@ -12,7 +12,7 @@ public static class AuthRoutes
     public static void AddAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("users/me",
-            [Authorize(Roles = "Client")]
+            [HasPermission(Permission.Admin)]
             (ClaimsPrincipal claims) =>
         {
             return Results.Ok(new
